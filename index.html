@@ -207,6 +207,7 @@
   </div>
 </div>
 
+<div id="appWrap" style="display:none">
 <div class="sticky-top">
   <div class="header">
     <h1>2026 영업과표 대시보드</h1>
@@ -254,6 +255,7 @@
 </div>
 
 <div class="overlay" id="overlay"><span>데이터 로딩 중...</span></div>
+</div><!-- /appWrap -->
 
 <script>
 /* ══════════════════════════════════════
@@ -267,14 +269,33 @@ async function sha256(text) {
   return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
 }
 
+var loginAttempts = 0;
+var lockoutUntil = 0;
+
 async function doLogin() {
+  var now = Date.now();
+  if (now < lockoutUntil) {
+    var sec = Math.ceil((lockoutUntil - now) / 1000);
+    document.getElementById('loginError').textContent = sec + '초 후 다시 시도하세요.';
+    document.getElementById('loginError').style.display = 'block';
+    return;
+  }
   var pw = document.getElementById('pwInput').value;
   var hash = await sha256(pw);
   if (hash === PW_HASH) {
     sessionStorage.setItem('dashboard_auth', 'ok');
     document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appWrap').style.display = '';
+    loginAttempts = 0;
     refresh();
   } else {
+    loginAttempts++;
+    if (loginAttempts >= 5) {
+      lockoutUntil = now + 30000;
+      document.getElementById('loginError').textContent = '5회 실패. 30초 후 다시 시도하세요.';
+    } else {
+      document.getElementById('loginError').textContent = '비밀번호가 올바르지 않습니다. (' + loginAttempts + '/5)';
+    }
     document.getElementById('loginError').style.display = 'block';
     document.getElementById('pwInput').value = '';
     document.getElementById('pwInput').focus();
@@ -284,6 +305,13 @@ async function doLogin() {
 // 세션 체크 - 이미 로그인했으면 바로 진입
 if (sessionStorage.getItem('dashboard_auth') === 'ok') {
   document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appWrap').style.display = '';
+}
+
+/* ── HTML 이스케이프 (XSS 방지) ── */
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ══════════════════════════════════════
@@ -480,19 +508,19 @@ function renderTimeline() {
     list.forEach(function(p) { deptTotal += p.budget; });
 
     h += '<tr class="dept-row"><td colspan="15">';
-    h += '<span class="dept-badge" style="background:' + color + '">' + dept + '</span>';
+    h += '<span class="dept-badge" style="background:' + color + '">' + esc(dept) + '</span>';
     h += ' &nbsp; ' + list.length + '건 · ' + fmt(deptTotal) + '</td></tr>';
 
     list.forEach(function(p) {
-      h += '<tr class="p-row ' + p.dept.replace(/\s/g,'') + '">';
-      h += '<td class="col-name" title="' + p.name + '">' + p.name + '</td>';
+      h += '<tr class="p-row ' + esc(p.dept).replace(/\s/g,'') + '">';
+      h += '<td class="col-name" title="' + esc(p.name) + '">' + esc(p.name) + '</td>';
       for (var i = 0; i < 12; i++) {
         var val = p.months[i] || '';
         var t = cellType(val);
-        h += '<td class="' + cellClass(t) + '">' + cellLabel(val, t) + '</td>';
+        h += '<td class="' + cellClass(t) + '">' + esc(cellLabel(val, t)) + '</td>';
       }
       h += '<td class="col-budget" style="color:#c0392b;font-weight:600">' + fmt(p.budget) + '</td>';
-      h += '<td class="col-pm">' + (p.pm || '') + '</td></tr>';
+      h += '<td class="col-pm">' + esc(p.pm) + '</td></tr>';
     });
   });
 
@@ -503,7 +531,7 @@ function renderTimeline() {
   if (D.failed.length > 0 && D.filter === 'all') {
     sec.style.display = 'block';
     var fh = '';
-    D.failed.forEach(function(p) { if (p.name) fh += '<span style="margin-right:12px;font-size:12px;">' + p.name + '</span>'; });
+    D.failed.forEach(function(p) { if (p.name) fh += '<span style="margin-right:12px;font-size:12px;">' + esc(p.name) + '</span>'; });
     document.getElementById('failedList').innerHTML = fh;
   } else { sec.style.display = 'none'; }
 }
@@ -527,7 +555,7 @@ function renderDiagram() {
     var ht = Math.max(10, info.budget/max*100), c = D.COLORS[d]||'#999';
     bh += '<div class="bar-item"><div class="bar-pct">'+pct+'%</div>';
     bh += '<div class="bar-track"><div class="bar-fill" style="height:'+ht+'%;background:'+c+'"></div></div>';
-    bh += '<div class="bar-label">'+d+'</div><div class="bar-value">'+fmt(info.budget)+'</div>';
+    bh += '<div class="bar-label">'+esc(d)+'</div><div class="bar-value">'+fmt(info.budget)+'</div>';
     bh += '<div class="bar-value">'+info.count+'건</div></div>';
   });
   document.getElementById('summaryBars').innerHTML = bh;
@@ -536,8 +564,8 @@ function renderDiagram() {
   keys.forEach(function(d) {
     var info = depts[d], ratio = total>0?info.budget/total:0.25;
     var sz = Math.max(140, Math.sqrt(ratio)*380), c = D.COLORS[d]||'#999';
-    bb += '<div class="dept-bubble" style="width:'+sz+'px;height:'+sz+'px;background:'+c+'" onclick="showDetail(\''+d+'\')">';
-    bb += '<div class="dept-bubble-label">'+d+'</div><div class="dept-bubble-budget">'+fmt(info.budget)+'</div>';
+    bb += '<div class="dept-bubble" style="width:'+sz+'px;height:'+sz+'px;background:'+c+'" onclick="showDetail(\''+esc(d)+'\')">';
+    bb += '<div class="dept-bubble-label">'+esc(d)+'</div><div class="dept-bubble-budget">'+fmt(info.budget)+'</div>';
     bb += '<div class="dept-bubble-count">'+info.count+'건</div></div>';
   });
   document.getElementById('bubbleArea').innerHTML = bb;
@@ -547,11 +575,11 @@ function showDetail(dept) {
   var list = fp().filter(function(p){return p.dept===dept;});
   var c = D.COLORS[dept]||'#999';
   var panel = document.getElementById('detailPanel');
-  var h = '<h3 style="color:'+c+'">'+dept+' ('+list.length+'건)</h3><div class="detail-grid">';
+  var h = '<h3 style="color:'+c+'">'+esc(dept)+' ('+list.length+'건)</h3><div class="detail-grid">';
   list.sort(function(a,b){return b.budget-a.budget;});
   list.forEach(function(p) {
-    h += '<div class="d-card" style="border-left-color:'+c+'"><div class="d-card-name">'+p.name+'</div>';
-    h += '<div class="d-card-info">'+fmt(p.budget)+' · '+(p.pm||'-')+'</div></div>';
+    h += '<div class="d-card" style="border-left-color:'+c+'"><div class="d-card-name">'+esc(p.name)+'</div>';
+    h += '<div class="d-card-info">'+fmt(p.budget)+' · '+esc(p.pm||'-')+'</div></div>';
   });
   h += '</div>';
   panel.innerHTML = h; panel.classList.add('active');
