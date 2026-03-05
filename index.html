@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>2026 영업과표 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -192,6 +193,52 @@
   }
   .login-box .login-btn:hover { opacity: 0.9; }
   .login-error { color: #e74c3c; font-size: 12px; margin-top: 8px; display: none; }
+
+  /* ── 매출 분석 탭 (다크 테마) ── */
+  #viewAnalysis { background: #0f1923; color: #e0e0e0; min-height: 100vh; }
+  .a-topbar { background: linear-gradient(135deg, #0d2137, #1a3a5c); padding: 24px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .a-topbar h2 { font-size: 20px; color: #fff; }
+  .a-topbar .period { color: #7eb8da; font-size: 13px; }
+  .a-summary { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; padding: 20px 40px; }
+  .a-card { background: linear-gradient(135deg,#142d44,#1a3a5c); border-radius: 14px; padding: 22px 24px; position: relative; overflow: hidden; }
+  .a-card::after { content:''; position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.03); }
+  .a-card-label { font-size: 13px; color: #7eb8da; margin-bottom: 8px; }
+  .a-card-value { font-size: 28px; font-weight: 700; color: #fff; }
+  .a-card-sub { font-size: 12px; color: #5a9; margin-top: 6px; }
+  .a-card-sub.negative { color: #e74c3c; }
+  .a-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 40px 20px; }
+  .a-grid-full { grid-column: 1/-1; }
+  .a-panel { background: #142d44; border-radius: 14px; padding: 24px; }
+  .a-panel-title { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .a-panel-title .badge { background: #1a4a6c; padding: 4px 10px; border-radius: 12px; font-size: 11px; color: #7eb8da; }
+  .a-client-table { width:100%; border-collapse:collapse; }
+  .a-client-table th { text-align:left; padding:8px 10px; font-size:12px; color:#7eb8da; border-bottom:1px solid #1e3d56; }
+  .a-client-table td { padding:10px 10px; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.05); color:#e0e0e0; }
+  .a-client-table tr:hover { background:rgba(255,255,255,0.03); }
+  .a-client-table tr { cursor:pointer; }
+  .a-rank { display:inline-block; width:24px; height:24px; border-radius:6px; text-align:center; line-height:24px; font-size:12px; font-weight:700; }
+  .a-rank-1 { background:#f1c40f; color:#333; } .a-rank-2 { background:#bdc3c7; color:#333; }
+  .a-rank-3 { background:#cd7f32; color:#fff; } .a-rank-n { background:#1e3d56; color:#7eb8da; }
+  .a-num { text-align:right; font-variant-numeric:tabular-nums; }
+  .a-bar-cell { width:100px; }
+  .a-mini-bar { height:6px; border-radius:3px; background:#1e3d56; overflow:hidden; }
+  .a-mini-bar-fill { height:100%; border-radius:3px; }
+  .a-author-table { width:100%; border-collapse:collapse; }
+  .a-author-table th { text-align:left; padding:8px 10px; font-size:12px; color:#7eb8da; border-bottom:1px solid #1e3d56; }
+  .a-author-table td { padding:10px 10px; font-size:13px; border-bottom:1px solid rgba(255,255,255,0.05); color:#e0e0e0; }
+  .a-author-table tr:hover { background:rgba(255,255,255,0.03); }
+  .a-insight-list { list-style:none; }
+  .a-insight-list li { padding:12px 16px; border-left:3px solid #2E75B6; margin-bottom:10px; background:rgba(46,117,182,0.08); border-radius:0 8px 8px 0; font-size:13px; line-height:1.6; color:#e0e0e0; }
+  .a-insight-list li strong { color:#5ac; }
+  .a-project-row td { padding:4px 10px 4px 50px !important; border-bottom:none !important; }
+  .a-project-row:last-child td { border-bottom:1px solid rgba(255,255,255,0.05) !important; }
+  .a-project-name { color:#7eb8da; font-size:12px; }
+  .a-project-rev { color:#5a9; font-size:12px; }
+  .a-project-year { color:#888; font-size:11px; }
+  .a-expand-icon { display:inline-block; width:16px; transition:transform 0.2s; }
+  .a-expand-icon.open { transform:rotate(90deg); }
+  .a-chart-container { position:relative; height:260px; }
+  .a-rate-high { color:#27AE60; } .a-rate-mid { color:#f1c40f; } .a-rate-low { color:#e74c3c; }
 </style>
 </head>
 <body>
@@ -220,6 +267,7 @@
   <div class="tabs">
     <div class="tab active" data-v="timeline" onclick="switchTab('timeline')">타임라인</div>
     <div class="tab" data-v="diagram" onclick="switchTab('diagram')">예산 다이어그램</div>
+    <div class="tab" data-v="analysis" onclick="switchTab('analysis')">매출 분석</div>
   </div>
 
   <div class="filter-bar">
@@ -252,6 +300,26 @@
     <div class="bubble-area" id="bubbleArea"></div>
     <div class="detail-panel" id="detailPanel"></div>
   </div>
+</div>
+
+<div class="view" id="viewAnalysis">
+  <div class="a-topbar"><div><h2>매출 분석</h2><div class="period">완료기안 기반 (2023-2025)</div></div></div>
+  <div class="a-summary">
+    <div class="a-card"><div class="a-card-label">3년 누적 매출</div><div class="a-card-value" id="aTotalRev">-</div><div class="a-card-sub" id="aRevTrend"></div></div>
+    <div class="a-card"><div class="a-card-label">3년 누적 수익</div><div class="a-card-value" id="aTotalProf">-</div><div class="a-card-sub" id="aProfRate"></div></div>
+    <div class="a-card"><div class="a-card-label">총 사업 건수</div><div class="a-card-value" id="aTotalCount">-</div><div class="a-card-sub" id="aCountAvg"></div></div>
+    <div class="a-card"><div class="a-card-label">핵심 고객 수</div><div class="a-card-value" id="aClientCount">-</div><div class="a-card-sub">2년 이상 반복 거래</div></div>
+  </div>
+  <div class="a-grid">
+    <div class="a-panel"><div class="a-panel-title">연도별 매출 / 수익 <span class="badge">3년 추이</span></div><div class="a-chart-container"><canvas id="aYearlyChart"></canvas></div></div>
+    <div class="a-panel"><div class="a-panel-title">고객 TOP 20 <span class="badge">클릭하면 사업 목록</span></div><table class="a-client-table"><thead><tr><th>#</th><th>고객명</th><th class="a-num">매출</th><th class="a-num">수익</th><th class="a-num">이익률</th><th>건수</th><th class="a-bar-cell">연도별</th></tr></thead><tbody id="aClientBody"></tbody></table></div>
+  </div>
+  <div class="a-grid">
+    <div class="a-panel"><div class="a-panel-title">직원별 실적 분석 <span class="badge">매출순</span></div><div class="a-chart-container"><canvas id="aAuthorChart"></canvas></div><table class="a-author-table" style="margin-top:16px"><thead><tr><th>이름</th><th class="a-num">매출</th><th class="a-num">수익</th><th class="a-num">이익률</th><th class="a-num">건수</th><th class="a-num">건당 매출</th></tr></thead><tbody id="aAuthorBody"></tbody></table></div>
+    <div class="a-panel"><div class="a-panel-title">고객별 연도 매출 추이 <span class="badge">Top 5</span></div><div class="a-chart-container" style="height:300px"><canvas id="aClientYearChart"></canvas></div><div class="a-panel-title" style="margin-top:24px">2025년 고객매출 TOP 10 <span class="badge">올해 실적</span></div><table class="a-author-table"><thead><tr><th>#</th><th>고객명</th><th class="a-num">2025 매출</th><th class="a-bar-cell">비중</th></tr></thead><tbody id="aTop2025Body"></tbody></table></div>
+  </div>
+  <div class="a-grid"><div class="a-panel a-grid-full"><div class="a-panel-title">Key Insights</div><ul class="a-insight-list" id="aInsightList"></ul></div></div>
+  <div style="height:40px"></div>
 </div>
 
 <div class="overlay" id="overlay"><span>데이터 로딩 중...</span></div>
@@ -360,20 +428,23 @@ function refresh() {
   btn.disabled = true; btn.textContent = '로딩...';
   document.getElementById('overlay').classList.remove('hidden');
 
-  fetch(SHEET_CSV_URL)
-    .then(function(r) { return r.text(); })
-    .then(function(csv) {
-      var rows = parseCSV(csv);
-      processData(rows);
-      render();
-      btn.disabled = false; btn.textContent = '수정사항 반영';
-      document.getElementById('overlay').classList.add('hidden');
-    })
-    .catch(function(e) {
-      alert('데이터 로딩 실패: ' + e.message);
-      btn.disabled = false; btn.textContent = '수정사항 반영';
-      document.getElementById('overlay').classList.add('hidden');
-    });
+  Promise.all([
+    fetch(SHEET_CSV_URL).then(function(r){return r.text();}),
+    fetch(CSV_URL_2).then(function(r){return r.text();})
+  ]).then(function(results) {
+    var rows1 = parseCSV(results[0]);
+    processData(rows1);
+    render();
+    var rows2 = parseCSV(results[1]);
+    ANALYSIS = aggregateAnalysisData(rows2);
+    renderAnalysis();
+    btn.disabled = false; btn.textContent = '수정사항 반영';
+    document.getElementById('overlay').classList.add('hidden');
+  }).catch(function(e) {
+    alert('데이터 로딩 실패: ' + e.message);
+    btn.disabled = false; btn.textContent = '수정사항 반영';
+    document.getElementById('overlay').classList.add('hidden');
+  });
 }
 
 function processData(rows) {
@@ -458,7 +529,9 @@ function setFilter(el) {
 function switchTab(v) {
   document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.v === v); });
   document.querySelectorAll('.view').forEach(function(el){el.classList.remove('active');});
-  document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1)).classList.add('active');
+  var viewId = v === 'analysis' ? 'viewAnalysis' : 'view' + v.charAt(0).toUpperCase() + v.slice(1);
+  document.getElementById(viewId).classList.add('active');
+  document.querySelector('.filter-bar').style.display = v === 'analysis' ? 'none' : '';
 }
 
 function cellType(val) {
@@ -584,6 +657,198 @@ function showDetail(dept) {
   h += '</div>';
   panel.innerHTML = h; panel.classList.add('active');
   panel.scrollIntoView({behavior:'smooth'});
+}
+
+/* ══════════════════════════════════════
+   매출 분석 (CSV #2)
+   ══════════════════════════════════════ */
+var CSV_URL_2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYbml6l-WYYPuNU2hVvSEojs0x455An7SS95iGOdUcsQSZatnPCUD1cAyRAdt4eeqe0UsUMTXg5eAn/pub?gid=901376231&single=true&output=csv';
+var ANALYSIS = null;
+var aCharts = {};
+
+function aggregateAnalysisData(rows) {
+  // rows[0] = headers: 사업명,건수,매출,수익,이익률,연도,담당자,발주처
+  var yearly = {}, clients = {}, authors = {};
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i]; if (!r[0] || r.length < 8) continue;
+    var name = r[0].trim(), rev = parseInt(r[2].replace(/[^0-9-]/g,''))||0;
+    var prof = parseInt(r[3].replace(/[^0-9-]/g,''))||0, yearStr = r[5].trim();
+    var author = r[6].trim(), client = r[7].trim();
+    var cnt = parseInt(r[1])||1;
+    var years = yearStr.split('/').map(function(y){return y.trim();});
+
+    // 연도별 집계 (2023~2025)
+    var targetYears = years.filter(function(y){return y==='2023'||y==='2024'||y==='2025';});
+    if (targetYears.length > 0) {
+      var splitRev = Math.round(rev / targetYears.length);
+      var splitProf = Math.round(prof / targetYears.length);
+      targetYears.forEach(function(y) {
+        if (!yearly[y]) yearly[y] = {revenue:0, profit:0, count:0};
+        yearly[y].revenue += splitRev; yearly[y].profit += splitProf; yearly[y].count += cnt;
+      });
+    }
+
+    // 발주처별 집계
+    if (!clients[client]) clients[client] = {name:client, revenue:0, profit:0, count:0, y2023:0, y2024:0, y2025:0, projects:[]};
+    clients[client].revenue += rev; clients[client].profit += prof; clients[client].count += cnt;
+    clients[client].projects.push({name:name, revenue:rev, year:yearStr});
+    targetYears.forEach(function(y) {
+      var k = 'y'+y; clients[client][k] += Math.round(rev / targetYears.length);
+    });
+
+    // 담당자별 집계 (슬래시로 복수 가능)
+    var auths = author.split('/').map(function(a){return a.trim();}).filter(function(a){return a;});
+    auths.forEach(function(a) {
+      if (!authors[a]) authors[a] = {name:a, revenue:0, profit:0, count:0, y2023:0, y2024:0, y2025:0, y2023p:0, y2024p:0, y2025p:0};
+      var splitA = Math.round(rev / auths.length), splitP = Math.round(prof / auths.length);
+      authors[a].revenue += splitA; authors[a].profit += splitP; authors[a].count += cnt;
+      targetYears.forEach(function(y) {
+        authors[a]['y'+y] += Math.round(splitA / targetYears.length);
+        authors[a]['y'+y+'p'] += Math.round(splitP / targetYears.length);
+      });
+    });
+  }
+
+  // 정렬
+  var topClients = Object.values(clients).sort(function(a,b){return b.revenue-a.revenue;}).slice(0,20);
+  var authorList = Object.values(authors).filter(function(a){return a.revenue>0;}).sort(function(a,b){return b.revenue-a.revenue;});
+
+  return {yearly_all: yearly, top_clients: topClients, authors: authorList};
+}
+
+function aFmt(n) {
+  if (n >= 100000000) return (n/100000000).toFixed(1)+'억';
+  if (n >= 10000) return Math.round(n/10000).toLocaleString()+'만';
+  return n.toLocaleString();
+}
+function aRateClass(r) { return r>=35?'a-rate-high':r>=25?'a-rate-mid':'a-rate-low'; }
+
+function renderAnalysis() {
+  if (!ANALYSIS) return;
+  renderASummary(); renderAYearlyChart(); renderAClients();
+  renderAAuthors(); renderAClientYearChart(); renderATop2025(); renderAInsights();
+}
+
+function renderASummary() {
+  var ya = ANALYSIS.yearly_all;
+  var y23 = ya['2023']||{revenue:0,profit:0,count:0};
+  var y24 = ya['2024']||{revenue:0,profit:0,count:0};
+  var y25 = ya['2025']||{revenue:0,profit:0,count:0};
+  var tRev = y23.revenue+y24.revenue+y25.revenue;
+  var tProf = y23.profit+y24.profit+y25.profit;
+  var tCnt = y23.count+y24.count+y25.count;
+  document.getElementById('aTotalRev').textContent = (tRev/100000000).toFixed(1)+'억';
+  document.getElementById('aTotalProf').textContent = (tProf/100000000).toFixed(1)+'억';
+  document.getElementById('aTotalCount').textContent = tCnt+'건';
+  document.getElementById('aProfRate').textContent = '평균 이익률 '+(tRev>0?(tProf/tRev*100).toFixed(0):0)+'%';
+  var diff = y23.revenue>0?((y25.revenue-y23.revenue)/y23.revenue*100).toFixed(0):0;
+  var el = document.getElementById('aRevTrend');
+  el.textContent = (diff>=0?'+':'')+diff+'% vs 2023'; if(diff<0) el.className='a-card-sub negative';
+  document.getElementById('aCountAvg').textContent = '연평균 '+Math.round(tCnt/3)+'건';
+  var repeat = ANALYSIS.top_clients.filter(function(c){return [c.y2023,c.y2024,c.y2025].filter(function(v){return v>0;}).length>=2;}).length;
+  document.getElementById('aClientCount').textContent = repeat+'개';
+}
+
+function renderAYearlyChart() {
+  var ya = ANALYSIS.yearly_all;
+  var y23=ya['2023']||{revenue:0,profit:0}, y24=ya['2024']||{revenue:0,profit:0}, y25=ya['2025']||{revenue:0,profit:0};
+  if(aCharts.yearly) aCharts.yearly.destroy();
+  aCharts.yearly = new Chart(document.getElementById('aYearlyChart'),{
+    type:'bar', data:{labels:['2023','2024','2025'], datasets:[
+      {label:'매출',data:[y23.revenue,y24.revenue,y25.revenue],backgroundColor:'rgba(46,117,182,0.8)',borderRadius:6,barPercentage:0.5},
+      {label:'수익',data:[y23.profit,y24.profit,y25.profit],backgroundColor:'rgba(39,174,96,0.8)',borderRadius:6,barPercentage:0.5}
+    ]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aaa',font:{size:12}}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+aFmt(ctx.raw);}}}},scales:{x:{ticks:{color:'#888'},grid:{display:false}},y:{ticks:{color:'#888',callback:function(v){return (v/100000000).toFixed(0)+'억';}},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+}
+
+function renderAClients() {
+  var html = '';
+  ANALYSIS.top_clients.forEach(function(c,i){
+    var rate = c.revenue>0?(c.profit/c.revenue*100).toFixed(0):0;
+    var rc = i<3?'a-rank-'+(i+1):'a-rank-n';
+    var total=c.y2023+c.y2024+c.y2025; var w23=total>0?(c.y2023/total*100).toFixed(0):0;
+    var w24=total>0?(c.y2024/total*100).toFixed(0):0; var w25=total>0?(c.y2025/total*100).toFixed(0):0;
+    html+='<tr onclick="aToggle('+i+')" title="클릭하면 사업 목록"><td><span class="a-rank '+rc+'">'+(i+1)+'</span></td>';
+    html+='<td><span class="a-expand-icon" id="a-arrow-'+i+'">&#9654;</span> '+esc(c.name)+'</td>';
+    html+='<td class="a-num">'+aFmt(c.revenue)+'</td><td class="a-num">'+aFmt(c.profit)+'</td>';
+    html+='<td class="a-num '+aRateClass(+rate)+'">'+rate+'%</td><td class="a-num">'+c.count+'</td>';
+    html+='<td class="a-bar-cell"><div class="a-mini-bar" title="23:'+aFmt(c.y2023)+' / 24:'+aFmt(c.y2024)+' / 25:'+aFmt(c.y2025)+'"><div style="display:flex;height:100%">';
+    html+='<div class="a-mini-bar-fill" style="width:'+w23+'%;background:#2E75B6"></div>';
+    html+='<div class="a-mini-bar-fill" style="width:'+w24+'%;background:#27AE60"></div>';
+    html+='<div class="a-mini-bar-fill" style="width:'+w25+'%;background:#f1c40f"></div></div></div></td></tr>';
+    if(c.projects&&c.projects.length){c.projects.forEach(function(p){
+      html+='<tr class="a-project-row" id="a-proj-'+i+'" style="display:none"><td></td>';
+      html+='<td colspan="4"><span class="a-project-name">'+esc(p.name)+'</span></td>';
+      html+='<td class="a-num"><span class="a-project-year">'+esc(p.year)+'</span></td>';
+      html+='<td class="a-num"><span class="a-project-rev">'+aFmt(p.revenue)+'</span></td></tr>';
+    });}
+  });
+  document.getElementById('aClientBody').innerHTML = html;
+}
+
+function aToggle(idx) {
+  var rows=document.querySelectorAll('#a-proj-'+idx);
+  var arrow=document.getElementById('a-arrow-'+idx);
+  var vis=rows[0]&&rows[0].style.display!=='none';
+  rows.forEach(function(r){r.style.display=vis?'none':'table-row';});
+  if(arrow) arrow.classList.toggle('open',!vis);
+}
+
+function renderAAuthors() {
+  var authors = ANALYSIS.authors;
+  if(aCharts.author) aCharts.author.destroy();
+  aCharts.author = new Chart(document.getElementById('aAuthorChart'),{
+    type:'bar', data:{labels:authors.map(function(a){return a.name;}), datasets:[
+      {label:'2023',data:authors.map(function(a){return a.y2023;}),backgroundColor:'rgba(46,117,182,0.8)',borderRadius:4},
+      {label:'2024',data:authors.map(function(a){return a.y2024;}),backgroundColor:'rgba(39,174,96,0.8)',borderRadius:4},
+      {label:'2025',data:authors.map(function(a){return a.y2025;}),backgroundColor:'rgba(241,196,15,0.8)',borderRadius:4}
+    ]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aaa',font:{size:11}}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+aFmt(ctx.raw);}}}},scales:{x:{stacked:true,ticks:{color:'#888',font:{size:11}},grid:{display:false}},y:{stacked:true,ticks:{color:'#888',callback:function(v){return (v/100000000).toFixed(0)+'억';}},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+  document.getElementById('aAuthorBody').innerHTML = authors.map(function(a){
+    var rate=a.revenue>0?(a.profit/a.revenue*100).toFixed(0):0;
+    var perDeal=a.count>0?aFmt(Math.round(a.revenue/a.count)):'-';
+    return '<tr><td><b>'+esc(a.name)+'</b></td><td class="a-num">'+aFmt(a.revenue)+'</td><td class="a-num">'+aFmt(a.profit)+'</td><td class="a-num '+aRateClass(+rate)+'">'+rate+'%</td><td class="a-num">'+a.count+'</td><td class="a-num">'+perDeal+'</td></tr>';
+  }).join('');
+}
+
+function renderAClientYearChart() {
+  var top5 = ANALYSIS.top_clients.slice(0,5);
+  var colors = ['#2E75B6','#27AE60','#f1c40f','#e74c3c','#8E44AD'];
+  if(aCharts.clientYear) aCharts.clientYear.destroy();
+  aCharts.clientYear = new Chart(document.getElementById('aClientYearChart'),{
+    type:'line', data:{labels:['2023','2024','2025'], datasets:top5.map(function(c,i){
+      return {label:c.name, data:[c.y2023,c.y2024,c.y2025], borderColor:colors[i], backgroundColor:colors[i]+'33', tension:0.3, pointRadius:5, pointHoverRadius:7, borderWidth:2.5, fill:false};
+    })}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aaa',font:{size:11},usePointStyle:true}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+aFmt(ctx.raw);}}}},scales:{x:{ticks:{color:'#888'},grid:{display:false}},y:{ticks:{color:'#888',callback:function(v){return (v/100000000).toFixed(1)+'억';}},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+}
+
+function renderATop2025() {
+  var ya25 = (ANALYSIS.yearly_all['2025']||{revenue:1}).revenue;
+  var list = ANALYSIS.top_clients.filter(function(c){return c.y2025>0;}).sort(function(a,b){return b.y2025-a.y2025;}).slice(0,10);
+  var maxR = list[0]?list[0].y2025:1;
+  document.getElementById('aTop2025Body').innerHTML = list.map(function(c,i){
+    var pct=(c.y2025/ya25*100).toFixed(1); var barW=(c.y2025/maxR*100).toFixed(0);
+    var rc=i<3?'a-rank-'+(i+1):'a-rank-n';
+    return '<tr><td><span class="a-rank '+rc+'">'+(i+1)+'</span></td><td>'+esc(c.name)+'</td><td class="a-num">'+aFmt(c.y2025)+'</td><td class="a-bar-cell"><div class="a-mini-bar"><div class="a-mini-bar-fill" style="width:'+barW+'%;background:#f1c40f"></div></div><span style="font-size:11px;color:#888">'+pct+'%</span></td></tr>';
+  }).join('');
+}
+
+function renderAInsights() {
+  var ya=ANALYSIS.yearly_all; var y23=ya['2023']||{revenue:1}, y25=ya['2025']||{revenue:0};
+  var revDiff=((y25.revenue-y23.revenue)/y23.revenue*100).toFixed(1);
+  var bestRate=ANALYSIS.authors.filter(function(a){return a.revenue>100000000;}).sort(function(a,b){return (b.profit/b.revenue)-(a.profit/a.revenue);})[0];
+  var brVal=bestRate?(bestRate.profit/bestRate.revenue*100).toFixed(0):0;
+  var mostDeals=ANALYSIS.authors.slice().sort(function(a,b){return b.count-a.count;})[0];
+  var growing=ANALYSIS.top_clients.filter(function(c){return c.y2025>c.y2023&&c.y2024>c.y2023;}).sort(function(a,b){return (b.y2025-b.y2023)-(a.y2025-a.y2023);});
+  var atRisk=ANALYSIS.top_clients.filter(function(c){return c.y2025===0&&(c.y2023>0||c.y2024>0);});
+  var ins=[
+    '<strong>매출 추세:</strong> 2023년 대비 2025년 매출이 '+revDiff+'% 변동. 신규 고객 확보 없이는 하락세가 지속될 수 있습니다.',
+    '<strong>수익률 최고 - '+(bestRate?esc(bestRate.name):'')+':</strong> 이익률 '+brVal+'%로 가장 높습니다. 고마진 사업 노하우를 팀에 공유하면 전사 이익률 개선이 가능합니다.',
+    '<strong>성장 고객:</strong> '+growing.slice(0,3).map(function(c){return esc(c.name);}).join(', ')+' 등이 매년 매출 증가 중입니다.',
+    '<strong>이탈 위험:</strong> '+(atRisk.length>0?atRisk.map(function(c){return esc(c.name);}).join(', ')+' - 2025년 매출 0. 재접촉이 시급합니다.':'해당 없음'),
+    '<strong>건당 매출 격차:</strong> '+(mostDeals?esc(mostDeals.name):'')+'('+(mostDeals?mostDeals.count:0)+'건)은 건수는 많지만 건당 매출이 낮습니다. 중대형 사업 집중 전략이 필요합니다.'
+  ];
+  document.getElementById('aInsightList').innerHTML = ins.map(function(t){return '<li>'+t+'</li>';}).join('');
 }
 
 // 이미 로그인 상태면 자동 로드
