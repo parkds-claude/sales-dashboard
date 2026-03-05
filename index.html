@@ -73,6 +73,7 @@
   .gantt thead th {
     background: #1B3A5C; color: #fff; font-size: 12px; font-weight: 700;
     padding: 8px 2px;
+    position: sticky; top: var(--sticky-h, 160px); z-index: 50;
   }
   .gantt .col-name { width: 200px; min-width: 200px; text-align: left; padding: 6px 8px; }
   .gantt .col-pm { width: 60px; min-width: 60px; font-size: 11px; }
@@ -260,14 +261,15 @@
     <h1>2026 영업과표 대시보드</h1>
     <div class="header-right">
       <div class="total-badge" id="totalBadge">-</div>
+      <a class="btn" href="https://docs.google.com/spreadsheets/d/1KyoxPb7pfPPxfn-msNWwBTxlINDzYZIPuX_kRG8cBYY/edit" target="_blank" style="text-decoration:none">원본파일</a>
       <button class="btn" id="btnRefresh" onclick="refresh()">수정사항 반영</button>
     </div>
   </div>
 
   <div class="tabs">
     <div class="tab active" data-v="timeline" onclick="switchTab('timeline')">타임라인</div>
-    <div class="tab" data-v="diagram" onclick="switchTab('diagram')">예산 다이어그램</div>
-    <div class="tab" data-v="analysis" onclick="switchTab('analysis')">매출 분석</div>
+    <div class="tab" data-v="diagram" onclick="switchTab('diagram')">매출 다이어그램</div>
+    <div class="tab" data-v="analysis" onclick="switchTab('analysis')">지난 3년 매출분석</div>
   </div>
 
   <div class="filter-bar">
@@ -278,15 +280,16 @@
     <div class="chip" data-d="프로젝트기획실" onclick="setFilter(this)">프로젝트기획실</div>
     <div class="chip" data-d="기타" onclick="setFilter(this)">기타</div>
   </div>
-</div>
 
-<div class="view active" id="viewTimeline">
-  <div class="legend">
+  <div class="legend" id="legendBar">
     <div class="legend-item"><div class="legend-box" style="background:#3b82f6"></div>입찰준비</div>
     <div class="legend-item"><div class="legend-box" style="background:#93c5fd"></div>행사준비(진행)</div>
     <div class="legend-item"><div class="legend-box" style="background:#f97316"></div>행사일</div>
     <div class="legend-item"><div class="legend-box" style="background:#fbbf24"></div>기타(제안발표 등)</div>
   </div>
+</div>
+
+<div class="view active" id="viewTimeline">
   <div class="timeline" id="timelineWrap"></div>
   <div class="failed-section" id="failedSection" style="display:none">
     <h4>입찰 실패</h4>
@@ -440,6 +443,7 @@ function refresh() {
     renderAnalysis();
     btn.disabled = false; btn.textContent = '수정사항 반영';
     document.getElementById('overlay').classList.add('hidden');
+    updateStickyHeight();
   }).catch(function(e) {
     alert('데이터 로딩 실패: ' + e.message);
     btn.disabled = false; btn.textContent = '수정사항 반영';
@@ -532,6 +536,15 @@ function switchTab(v) {
   var viewId = v === 'analysis' ? 'viewAnalysis' : 'view' + v.charAt(0).toUpperCase() + v.slice(1);
   document.getElementById(viewId).classList.add('active');
   document.querySelector('.filter-bar').style.display = v === 'analysis' ? 'none' : '';
+  document.getElementById('legendBar').style.display = v === 'timeline' ? '' : 'none';
+  updateStickyHeight();
+}
+
+function updateStickyHeight() {
+  setTimeout(function() {
+    var h = document.querySelector('.sticky-top').offsetHeight;
+    document.documentElement.style.setProperty('--sticky-h', h + 'px');
+  }, 0);
 }
 
 function cellType(val) {
