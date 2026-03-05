@@ -690,34 +690,39 @@ function aggregateAnalysisData(rows) {
     var cnt = parseInt(r[1])||1;
     var years = yearStr.split('/').map(function(y){return y.trim();});
 
-    // 연도별 집계 (2023~2025)
+    // 2023~2025에 해당하는 연도만 필터
     var targetYears = years.filter(function(y){return y==='2023'||y==='2024'||y==='2025';});
-    if (targetYears.length > 0) {
-      var splitRev = Math.round(rev / targetYears.length);
-      var splitProf = Math.round(prof / targetYears.length);
-      targetYears.forEach(function(y) {
-        if (!yearly[y]) yearly[y] = {revenue:0, profit:0, count:0};
-        yearly[y].revenue += splitRev; yearly[y].profit += splitProf; yearly[y].count += cnt;
-      });
-    }
+    if (targetYears.length === 0) continue; // 2023-2025 외 프로젝트는 제외
 
-    // 발주처별 집계
-    if (!clients[client]) clients[client] = {name:client, revenue:0, profit:0, count:0, y2023:0, y2024:0, y2025:0, projects:[]};
-    clients[client].revenue += rev; clients[client].profit += prof; clients[client].count += cnt;
-    clients[client].projects.push({name:name, revenue:rev, year:yearStr});
+    // 다년도 프로젝트는 전체 연도 수로 균등 분할, 2023-2025 부분만 사용
+    var splitRev = Math.round(rev / years.length);
+    var splitProf = Math.round(prof / years.length);
+    var targetRev = splitRev * targetYears.length;
+    var targetProf = splitProf * targetYears.length;
+
+    // 연도별 집계
     targetYears.forEach(function(y) {
-      var k = 'y'+y; clients[client][k] += Math.round(rev / targetYears.length);
+      if (!yearly[y]) yearly[y] = {revenue:0, profit:0, count:0};
+      yearly[y].revenue += splitRev; yearly[y].profit += splitProf; yearly[y].count += cnt;
     });
 
-    // 담당자별 집계 (슬래시로 복수 가능)
+    // 발주처별 집계 (2023-2025 부분만)
+    if (!clients[client]) clients[client] = {name:client, revenue:0, profit:0, count:0, y2023:0, y2024:0, y2025:0, projects:[]};
+    clients[client].revenue += targetRev; clients[client].profit += targetProf; clients[client].count += cnt;
+    clients[client].projects.push({name:name, revenue:targetRev, year:targetYears.join('/')});
+    targetYears.forEach(function(y) {
+      clients[client]['y'+y] += splitRev;
+    });
+
+    // 담당자별 집계 (슬래시로 복수 가능, 2023-2025 부분만)
     var auths = author.split('/').map(function(a){return a.trim();}).filter(function(a){return a;});
     auths.forEach(function(a) {
       if (!authors[a]) authors[a] = {name:a, revenue:0, profit:0, count:0, y2023:0, y2024:0, y2025:0, y2023p:0, y2024p:0, y2025p:0};
-      var splitA = Math.round(rev / auths.length), splitP = Math.round(prof / auths.length);
-      authors[a].revenue += splitA; authors[a].profit += splitP; authors[a].count += cnt;
+      var authRev = Math.round(targetRev / auths.length), authProf = Math.round(targetProf / auths.length);
+      authors[a].revenue += authRev; authors[a].profit += authProf; authors[a].count += cnt;
       targetYears.forEach(function(y) {
-        authors[a]['y'+y] += Math.round(splitA / targetYears.length);
-        authors[a]['y'+y+'p'] += Math.round(splitP / targetYears.length);
+        authors[a]['y'+y] += Math.round(splitRev / auths.length);
+        authors[a]['y'+y+'p'] += Math.round(splitProf / auths.length);
       });
     });
   }
