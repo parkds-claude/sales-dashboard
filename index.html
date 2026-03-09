@@ -187,12 +187,14 @@
   }
   .status-row.status-failed td { background: #FEF2F2; border-top-color: #FECACA; }
   .status-row.status-progress td { background: #F0FDF4; border-top-color: #BBF7D0; }
+  .status-row.status-etc td { background: #F8FAFC; border-top-color: #CBD5E1; }
   .status-badge {
     display: inline-block; padding: 3px 12px; border-radius: 6px;
     color: #fff; font-size: 12px; font-weight: 600;
   }
   .status-badge-failed { background: #DC2626; }
   .status-badge-progress { background: #16A34A; }
+  .status-badge-etc { background: #95A5A6; }
 
   /* ══ Loading Overlay ══ */
   .overlay {
@@ -463,7 +465,7 @@ var D = {
   projects: [], failed: [], inProgress: [], filter: 'all',
   MONTHS: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
   COLORS: {'SG_Part':'#2E75B6','문화기획실':'#27AE60','프로젝트기획실':'#8E44AD','기타':'#95A5A6'},
-  DEPT_ORDER: ['SG_Part','문화기획실','프로젝트기획실','기타']
+  DEPT_ORDER: ['SG_Part','문화기획실','프로젝트기획실']
 };
 
 /* ── CSV 파싱 ── */
@@ -682,13 +684,13 @@ function renderTimeline() {
     });
   });
 
-  // ── 입찰실패 섹션 ──
-  var failedFiltered = D.filter === 'all' ? D.failed : D.failed.filter(function(p){ return p.dept === D.filter; });
-  if (failedFiltered.length > 0) {
-    h += '<tr class="status-row status-failed"><td colspan="15">';
-    h += '<span class="status-badge status-badge-failed">입찰실패</span>';
-    h += ' &nbsp; ' + failedFiltered.length + '건</td></tr>';
-    failedFiltered.forEach(function(p) {
+  // ── 영업진행 중 섹션 ──
+  var progressFiltered = D.filter === 'all' ? D.inProgress : D.inProgress.filter(function(p){ return p.dept === D.filter; });
+  if (progressFiltered.length > 0) {
+    h += '<tr class="status-row status-progress"><td colspan="15">';
+    h += '<span class="status-badge status-badge-progress">영업진행 중</span>';
+    h += ' &nbsp; ' + progressFiltered.length + '건</td></tr>';
+    progressFiltered.forEach(function(p) {
       h += '<tr class="p-row ' + esc(p.dept).replace(/\s/g,'') + '">';
       h += '<td class="col-name" title="' + esc(p.name) + '">' + esc(p.name) + '</td>';
       for (var i = 0; i < 12; i++) {
@@ -701,13 +703,37 @@ function renderTimeline() {
     });
   }
 
-  // ── 영업진행 중 섹션 ──
-  var progressFiltered = D.filter === 'all' ? D.inProgress : D.inProgress.filter(function(p){ return p.dept === D.filter; });
-  if (progressFiltered.length > 0) {
-    h += '<tr class="status-row status-progress"><td colspan="15">';
-    h += '<span class="status-badge status-badge-progress">영업진행 중</span>';
-    h += ' &nbsp; ' + progressFiltered.length + '건</td></tr>';
-    progressFiltered.forEach(function(p) {
+  // ── 기타 섹션 ──
+  var etcList = grouped['기타'];
+  if (D.filter === '기타' || (D.filter === 'all' && etcList && etcList.length > 0)) {
+    var etcFiltered = D.filter === 'all' ? etcList : (etcList || []);
+    if (etcFiltered.length > 0) {
+      var etcTotal = 0;
+      etcFiltered.forEach(function(p) { etcTotal += p.budget; });
+      h += '<tr class="status-row status-etc"><td colspan="15">';
+      h += '<span class="status-badge status-badge-etc">기타</span>';
+      h += ' &nbsp; ' + etcFiltered.length + '건 · ' + fmt(etcTotal) + '</td></tr>';
+      etcFiltered.forEach(function(p) {
+        h += '<tr class="p-row ' + esc(p.dept).replace(/\s/g,'') + '">';
+        h += '<td class="col-name" title="' + esc(p.name) + '">' + esc(p.name) + '</td>';
+        for (var i = 0; i < 12; i++) {
+          var val = p.months[i] || '';
+          var t = cellType(val);
+          h += '<td class="' + cellClass(t) + '">' + esc(cellLabel(val, t)) + '</td>';
+        }
+        h += '<td class="col-budget" style="color:#c0392b;font-weight:600">' + fmt(p.budget) + '</td>';
+        h += '<td class="col-pm">' + esc(p.pm) + '</td></tr>';
+      });
+    }
+  }
+
+  // ── 입찰실패 섹션 ──
+  var failedFiltered = D.filter === 'all' ? D.failed : D.failed.filter(function(p){ return p.dept === D.filter; });
+  if (failedFiltered.length > 0) {
+    h += '<tr class="status-row status-failed"><td colspan="15">';
+    h += '<span class="status-badge status-badge-failed">입찰실패</span>';
+    h += ' &nbsp; ' + failedFiltered.length + '건</td></tr>';
+    failedFiltered.forEach(function(p) {
       h += '<tr class="p-row ' + esc(p.dept).replace(/\s/g,'') + '">';
       h += '<td class="col-name" title="' + esc(p.name) + '">' + esc(p.name) + '</td>';
       for (var i = 0; i < 12; i++) {
