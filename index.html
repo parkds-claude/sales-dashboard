@@ -731,7 +731,7 @@ function renderTimeline() {
   var failedFiltered = D.filter === 'all' ? D.failed : D.failed.filter(function(p){ return p.dept === D.filter; });
   if (failedFiltered.length > 0) {
     h += '<tr class="status-row status-failed"><td colspan="15">';
-    h += '<span class="status-badge status-badge-failed">입찰실패</span>';
+    h += '<span class="status-badge status-badge-failed">입찰영업 실패</span>';
     h += ' &nbsp; ' + failedFiltered.length + '건</td></tr>';
     failedFiltered.forEach(function(p) {
       h += '<tr class="p-row ' + esc(p.dept).replace(/\s/g,'') + '">';
