@@ -556,8 +556,8 @@ function processData(rows) {
     var dept = (row[colDept] || '').trim();
     var name = (row[colName] || '').trim();
 
-    if (dept === '입찰실패' || name === '입찰실패') { section = 'failed'; continue; }
-    if (dept.indexOf('영업진행') >= 0 || name.indexOf('영업진행') >= 0) { section = 'inProgress'; continue; }
+    if (dept === '입찰실패' || name === '입찰실패' || dept === '입찰영업 실패' || name === '입찰영업 실패') { section = 'failed'; continue; }
+    if (dept.indexOf('영업진행') >= 0 || name.indexOf('영업진행') >= 0 || dept.indexOf('영업 진행') >= 0 || name.indexOf('영업 진행') >= 0) { section = 'inProgress'; continue; }
     if (!dept || !name) continue;
 
     var months = [];
