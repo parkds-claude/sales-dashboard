@@ -335,7 +335,7 @@
     <h1>2026 영업과표 대시보드</h1>
     <div class="header-right">
       <div class="total-badge" id="totalBadge">-</div>
-      <a class="btn" href="https://docs.google.com/spreadsheets/d/1KyoxPb7pfPPxfn-msNWwBTxlINDzYZIPuX_kRG8cBYY/edit" target="_blank" style="text-decoration:none">원본파일</a>
+      <!-- 원본파일 링크 제거 (보안) -->
       <button class="btn" id="btnRefresh" onclick="refresh()">수정사항 반영</button>
     </div>
   </div>
@@ -400,15 +400,10 @@
 
 <script>
 /* ══════════════════════════════════════
-   비밀번호 보호 (SHA-256 해시)
+   서버 사이드 인증 (Apps Script 프록시)
    ══════════════════════════════════════ */
-var PW_HASH = '543442f2d39bbc8a46e9c1b3dee668f587c20bae7770aac57bc75fd98c739d65';
-
-async function sha256(text) {
-  var enc = new TextEncoder().encode(text);
-  var buf = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-}
+var API_BASE = 'https://script.google.com/macros/s/AKfycbwrRRVz6LMRvVLVeivNdJ39arjbiO5TIMWC7rUzutWOaOTAMJGSHMJReG-FT0NzhZFb/exec';
+var AUTH_PW = '';
 
 var loginAttempts = 0;
 var lockoutUntil = 0;
@@ -422,14 +417,23 @@ async function doLogin() {
     return;
   }
   var pw = document.getElementById('pwInput').value;
-  var hash = await sha256(pw);
-  if (hash === PW_HASH) {
-    sessionStorage.setItem('dashboard_auth', 'ok');
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('pwInput').disabled = true;
+
+  // 서버에 비밀번호 검증 요청
+  try {
+    var res = await fetch(API_BASE + '?pw=' + encodeURIComponent(pw) + '&gid=135095325');
+    var text = await res.text();
+    if (text.indexOf('unauthorized') >= 0) {
+      throw new Error('wrong_password');
+    }
+    AUTH_PW = pw;
+    sessionStorage.setItem('dashboard_pw', pw);
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('appWrap').style.display = '';
     loginAttempts = 0;
     refresh();
-  } else {
+  } catch(e) {
     loginAttempts++;
     if (loginAttempts >= 5) {
       lockoutUntil = now + 30000;
@@ -441,10 +445,12 @@ async function doLogin() {
     document.getElementById('pwInput').value = '';
     document.getElementById('pwInput').focus();
   }
+  document.getElementById('pwInput').disabled = false;
 }
 
 // 세션 체크 - 이미 로그인했으면 바로 진입
-if (sessionStorage.getItem('dashboard_auth') === 'ok') {
+if (sessionStorage.getItem('dashboard_pw')) {
+  AUTH_PW = sessionStorage.getItem('dashboard_pw');
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appWrap').style.display = '';
 }
@@ -459,7 +465,7 @@ function esc(str) {
    Google Sheets 게시 CSV URL
    "웹에 게시" 후 아래 URL을 교체하세요
    ══════════════════════════════════════ */
-var SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYbml6l-WYYPuNU2hVvSEojs0x455An7SS95iGOdUcsQSZatnPCUD1cAyRAdt4eeqe0UsUMTXg5eAn/pub?gid=135095325&single=true&output=csv';
+// 데이터는 Apps Script 프록시를 통해 서버 사이드 인증 후 제공됨
 
 var D = {
   projects: [], failed: [], inProgress: [], filter: 'all',
@@ -502,8 +508,8 @@ function refresh() {
   document.getElementById('overlay').classList.remove('hidden');
 
   Promise.all([
-    fetch(SHEET_CSV_URL).then(function(r){return r.text();}),
-    fetch(CSV_URL_2).then(function(r){return r.text();})
+    fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=135095325').then(function(r){return r.text();}),
+    fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=901376231').then(function(r){return r.text();})
   ]).then(function(results) {
     var rows1 = parseCSV(results[0]);
     processData(rows1);
@@ -803,7 +809,7 @@ function showDetail(dept) {
 /* ══════════════════════════════════════
    매출 분석 (CSV #2)
    ══════════════════════════════════════ */
-var CSV_URL_2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYbml6l-WYYPuNU2hVvSEojs0x455An7SS95iGOdUcsQSZatnPCUD1cAyRAdt4eeqe0UsUMTXg5eAn/pub?gid=901376231&single=true&output=csv';
+// CSV_URL_2 제거됨 — Apps Script 프록시로 대체
 var ANALYSIS = null;
 var aCharts = {};
 
@@ -998,7 +1004,7 @@ function renderAInsights() {
 }
 
 // 이미 로그인 상태면 자동 로드
-if (sessionStorage.getItem('dashboard_auth') === 'ok') { refresh(); }
+if (sessionStorage.getItem('dashboard_pw')) { refresh(); }
 </script>
 </body>
 </html>
