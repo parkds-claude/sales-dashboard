@@ -3,8 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://script.google.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src https://script.google.com; img-src 'self' data:; frame-ancestors 'self';">
 <title>2026 영업과표 대시보드</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-JweacYRfOqRb0JRkMxerhYsXk2JFMfLcfKVBmHClvMFsxxRe1fOdeUOBmIGVPi4p" crossorigin="anonymous"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
@@ -402,7 +404,7 @@
 /* ══════════════════════════════════════
    서버 사이드 인증 (Apps Script 프록시)
    ══════════════════════════════════════ */
-var API_BASE = 'https://script.google.com/macros/s/AKfycbwrRRVz6LMRvVLVeivNdJ39arjbiO5TIMWC7rUzutWOaOTAMJGSHMJReG-FT0NzhZFb/exec';
+var API_BASE = 'https://script.google.com/macros/s/AKfycbwige6mJEKahKvG0pJqAEOWCgbdanknBGHaJ7kwp3qTUNwPlwlrc4QU5D16SYrAG_xQxA/exec';
 var AUTH_PW = '';
 
 var loginAttempts = 0;
@@ -420,12 +422,16 @@ async function doLogin() {
   document.getElementById('loginError').style.display = 'none';
   document.getElementById('pwInput').disabled = true;
 
-  // 서버에 비밀번호 검증 요청
+  // 서버에 비밀번호 검증 요청 (POST)
   try {
-    var res = await fetch(API_BASE + '?pw=' + encodeURIComponent(pw) + '&gid=135095325');
+    var res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({pw: pw, gid: '135095325'})
+    });
     var text = await res.text();
-    if (text.indexOf('unauthorized') >= 0) {
-      throw new Error('wrong_password');
+    if (text.indexOf('unauthorized') >= 0 || text.indexOf('rate_limited') >= 0) {
+      throw new Error(text.indexOf('rate_limited') >= 0 ? 'rate_limited' : 'wrong_password');
     }
     AUTH_PW = pw;
     sessionStorage.setItem('dashboard_pw', pw);
@@ -435,7 +441,9 @@ async function doLogin() {
     refresh();
   } catch(e) {
     loginAttempts++;
-    if (loginAttempts >= 5) {
+    if (e.message === 'rate_limited') {
+      document.getElementById('loginError').textContent = '너무 많은 시도입니다. 5분 후 다시 시도하세요.';
+    } else if (loginAttempts >= 5) {
       lockoutUntil = now + 30000;
       document.getElementById('loginError').textContent = '5회 실패. 30초 후 다시 시도하세요.';
     } else {
@@ -458,7 +466,7 @@ if (sessionStorage.getItem('dashboard_pw')) {
 /* ── HTML 이스케이프 (XSS 방지) ── */
 function esc(str) {
   if (!str) return '';
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 /* ══════════════════════════════════════
@@ -508,8 +516,8 @@ function refresh() {
   document.getElementById('overlay').classList.remove('hidden');
 
   Promise.all([
-    fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=135095325').then(function(r){return r.text();}),
-    fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=901376231').then(function(r){return r.text();})
+    fetch(API_BASE, {method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pw:AUTH_PW,gid:'135095325'})}).then(function(r){return r.text();}),
+    fetch(API_BASE, {method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pw:AUTH_PW,gid:'901376231'})}).then(function(r){return r.text();})
   ]).then(function(results) {
     var rows1 = parseCSV(results[0]);
     processData(rows1);
@@ -521,7 +529,8 @@ function refresh() {
     document.getElementById('overlay').classList.add('hidden');
     updateStickyHeight();
   }).catch(function(e) {
-    alert('데이터 로딩 실패: ' + e.message);
+    console.error('Data load error:', e);
+    alert('데이터를 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.');
     btn.disabled = false; btn.textContent = '수정사항 반영';
     document.getElementById('overlay').classList.add('hidden');
   });
