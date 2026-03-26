@@ -511,14 +511,14 @@ function refresh() {
   btn.disabled = true; btn.textContent = '로딩...';
   document.getElementById('overlay').classList.remove('hidden');
 
-  Promise.all([
-    fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=135095325').then(function(r){return r.text();}),
-    fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=901376231').then(function(r){return r.text();})
-  ]).then(function(results) {
-    var rows1 = parseCSV(results[0]);
+  // 순차 요청 (Apps Script 동시 요청 제한 대응)
+  fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=135095325').then(function(r){return r.text();}).then(function(text1) {
+    var rows1 = parseCSV(text1);
     processData(rows1);
     render();
-    var rows2 = parseCSV(results[1]);
+    return fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=901376231').then(function(r){return r.text();});
+  }).then(function(text2) {
+    var rows2 = parseCSV(text2);
     ANALYSIS = aggregateAnalysisData(rows2);
     renderAnalysis();
     btn.disabled = false; btn.textContent = '수정사항 반영';
