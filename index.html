@@ -404,7 +404,7 @@
 /* ══════════════════════════════════════
    서버 사이드 인증 (Apps Script 프록시)
    ══════════════════════════════════════ */
-var API_BASE = 'https://script.google.com/macros/s/AKfycbwige6mJEKahKvG0pJqAEOWCgbdanknBGHaJ7kwp3qTUNwPlwlrc4QU5D16SYrAG_xQxA/exec';
+var API_BASE = 'https://script.google.com/macros/s/AKfycbySDAdgjA72JbWqNO4ZDjzb-C639Ks4BnI_a7oyrC-Hpi4NNgqwYm45unDRS6RrMaqOog/exec';
 var AUTH_PW = '';
 
 var loginAttempts = 0;
@@ -422,13 +422,9 @@ async function doLogin() {
   document.getElementById('loginError').style.display = 'none';
   document.getElementById('pwInput').disabled = true;
 
-  // 서버에 비밀번호 검증 요청 (POST)
+  // 서버에 비밀번호 검증 요청 (GET)
   try {
-    var res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: {'Content-Type': 'text/plain'},
-      body: JSON.stringify({pw: pw, gid: '135095325'})
-    });
+    var res = await fetch(API_BASE + '?pw=' + encodeURIComponent(pw) + '&gid=135095325');
     var text = await res.text();
     if (text.indexOf('unauthorized') >= 0 || text.indexOf('rate_limited') >= 0) {
       throw new Error(text.indexOf('rate_limited') >= 0 ? 'rate_limited' : 'wrong_password');
@@ -516,8 +512,8 @@ function refresh() {
   document.getElementById('overlay').classList.remove('hidden');
 
   Promise.all([
-    fetch(API_BASE, {method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pw:AUTH_PW,gid:'135095325'})}).then(function(r){return r.text();}),
-    fetch(API_BASE, {method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pw:AUTH_PW,gid:'901376231'})}).then(function(r){return r.text();})
+    fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=135095325').then(function(r){return r.text();}),
+    fetch(API_BASE + '?pw=' + encodeURIComponent(AUTH_PW) + '&gid=901376231').then(function(r){return r.text();})
   ]).then(function(results) {
     var rows1 = parseCSV(results[0]);
     processData(rows1);
