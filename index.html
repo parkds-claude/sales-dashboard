@@ -526,7 +526,7 @@ function refresh() {
     updateStickyHeight();
   }).catch(function(e) {
     console.error('Data load error:', e);
-    alert('데이터 로딩 실패: ' + e.message);
+    alert('데이터를 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.');
     btn.disabled = false; btn.textContent = '수정사항 반영';
     document.getElementById('overlay').classList.add('hidden');
   });
