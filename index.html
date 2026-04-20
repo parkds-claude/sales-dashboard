@@ -547,10 +547,13 @@ function processData(rows) {
   var colDept = -1, colName = -1, colBudget = -1, colPM = -1;
   var monthCols = [];
 
+  // 헤더는 공백·개행·전각공백을 제거 후 비교 (엄격 매칭 완화)
+  function normKey(s) { return (s || '').replace(/[\s\u3000]+/g, ''); }
+
   for (var c = 0; c < headers.length; c++) {
-    var h = headers[c];
-    if (h === '담당부서') colDept = c;
-    else if (h === '사업명') colName = c;
+    var h = normKey(headers[c]);
+    if (h.indexOf('담당부서') >= 0) colDept = c;
+    else if (h.indexOf('사업명') >= 0) colName = c;
     else if (h.indexOf('사업금액') >= 0 || h.indexOf('예산') >= 0) colBudget = c;
     else if (h.indexOf('PM') >= 0) colPM = c;
     else if (h.match(/^\d{1,2}월$/)) monthCols.push({idx: c, label: h});
@@ -561,15 +564,32 @@ function processData(rows) {
   D.failed = [];
   D.inProgress = [];
   var section = 'active'; // 'active' | 'failed' | 'inProgress'
+  var lastDept = ''; // 병합셀 fill-down용
 
   for (var r = headerIdx + 1; r < rows.length; r++) {
     var row = rows[r];
     var dept = (row[colDept] || '').trim();
     var name = (row[colName] || '').trim();
 
-    if (dept === '입찰실패' || name === '입찰실패' || dept === '입찰영업 실패' || name === '입찰영업 실패') { section = 'failed'; continue; }
-    if (dept.indexOf('영업진행') >= 0 || name.indexOf('영업진행') >= 0 || dept.indexOf('영업 진행') >= 0 || name.indexOf('영업 진행') >= 0) { section = 'inProgress'; continue; }
+    // 섹션 마커 판별: 공백 제거 후 전체가 마커 값과 일치할 때만 섹션 전환
+    var deptKey = normKey(dept);
+    var nameKey = normKey(name);
+    var isFailedMarker = (deptKey === '입찰실패' || nameKey === '입찰실패' ||
+                          deptKey === '입찰영업실패' || nameKey === '입찰영업실패');
+    var isProgressMarker = (deptKey === '영업진행' || nameKey === '영업진행' ||
+                            deptKey === '영업진행중' || nameKey === '영업진행중');
+    var isActiveMarker = (deptKey === '영업활동' || nameKey === '영업활동' ||
+                          deptKey === '영업과표' || nameKey === '영업과표');
+
+    if (isFailedMarker)   { section = 'failed';     lastDept = ''; continue; }
+    if (isProgressMarker) { section = 'inProgress'; lastDept = ''; continue; }
+    if (isActiveMarker)   { section = 'active';     lastDept = ''; continue; }
+
+    // 담당부서 병합셀: 빈 행은 직전 부서를 승계
+    if (!dept && name && lastDept) dept = lastDept;
+
     if (!dept || !name) continue;
+    lastDept = dept;
 
     var months = [];
     for (var mi = 0; mi < monthCols.length; mi++) {
