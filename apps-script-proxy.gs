@@ -64,39 +64,31 @@ function verifyIdToken(token) {
     var url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(token);
     var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     var code = res.getResponseCode();
-    var body = res.getContentText();
-    Logger.log('tokeninfo HTTP ' + code + ' body=' + body.slice(0, 200));
     if (code !== 200) {
       return { ok: false, reason: 'token_expired' };
     }
-    var info = JSON.parse(body);
+    var info = JSON.parse(res.getContentText());
 
-    // audience(aud)가 우리 Client ID인지
     if (info.aud !== GOOGLE_CLIENT_ID) {
-      Logger.log('aud mismatch: got=' + info.aud + ' expected=' + GOOGLE_CLIENT_ID);
+      Logger.log('aud mismatch: got=' + info.aud);
       return { ok: false, reason: 'unauthorized' };
     }
 
-    // 만료 확인
     if (!info.exp || parseInt(info.exp) * 1000 < Date.now()) {
       return { ok: false, reason: 'token_expired' };
     }
 
-    // 이메일 검증 여부
     if (info.email_verified !== 'true' && info.email_verified !== true) {
-      Logger.log('email_verified false: ' + info.email_verified);
       return { ok: false, reason: 'unauthorized' };
     }
 
     var email = String(info.email || '').toLowerCase();
 
-    // 도메인 화이트리스트
     if (!email.endsWith('@' + ALLOWED_DOMAIN)) {
-      Logger.log('domain forbidden: ' + email);
+      Logger.log('forbidden_domain: ' + email);
       return { ok: false, reason: 'forbidden_domain' };
     }
 
-    // 캐시 저장 (만료 시각까지, 최대 5분)
     var ttl = Math.min(300, Math.max(10, parseInt(info.exp) - Math.floor(Date.now() / 1000)));
     cache.put(cacheKey, JSON.stringify({ email: email, exp: parseInt(info.exp) }), ttl);
 

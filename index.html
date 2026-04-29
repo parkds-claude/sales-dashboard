@@ -342,6 +342,7 @@
       <div class="total-badge" id="totalBadge">-</div>
       <a class="btn" href="https://docs.google.com/spreadsheets/d/1KyoxPb7pfPPxfn-msNWwBTxlINDzYZIPuX_kRG8cBYY/edit" target="_blank" style="text-decoration:none">원본파일</a>
       <button class="btn" id="btnRefresh" onclick="refresh()">수정사항 반영</button>
+      <span id="userEmailLabel" style="font-size:11px;color:#888;margin-left:4px"></span>
       <button class="btn" onclick="logout()" title="로그아웃" style="background:#6b7280">로그아웃</button>
     </div>
   </div>
@@ -451,9 +452,15 @@ function handleCredentialResponse(response) {
   AUTH_TOKEN = token;
   sessionStorage.setItem('dashboard_token', token);
   sessionStorage.setItem('dashboard_email', email);
+  showUserBadge(email);
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appWrap').style.display = '';
   refresh();
+}
+
+function showUserBadge(email) {
+  var el = document.getElementById('userEmailLabel');
+  if (el) el.textContent = email || '';
 }
 
 // GIS 라이브러리 로드 후 버튼 렌더링
@@ -493,6 +500,7 @@ function logout() {
   sessionStorage.removeItem('dashboard_token');
   sessionStorage.removeItem('dashboard_email');
   AUTH_TOKEN = '';
+  showUserBadge('');
   if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
   location.reload();
 }
@@ -509,6 +517,7 @@ function logout() {
     return;
   }
   AUTH_TOKEN = token;
+  showUserBadge(sessionStorage.getItem('dashboard_email'));
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appWrap').style.display = '';
 })();
@@ -569,11 +578,9 @@ function refresh() {
     return fetch(API_BASE + '?token=' + encodeURIComponent(AUTH_TOKEN) + '&gid=' + gid)
       .then(function(r){ return r.text(); })
       .then(function(text) {
-        console.log('[authFetch] gid=' + gid + ' response:', text.slice(0, 200));
-        if (text === 'unauthorized' || text === 'token_expired' || text === 'forbidden_domain' ||
-            text === 'rate_limited' || text === 'invalid_gid' || text === 'sheet_not_found' || text === 'error') {
-          throw new Error(text);
-        }
+        var KNOWN_ERRORS = ['unauthorized', 'token_expired', 'forbidden_domain',
+                            'rate_limited', 'invalid_gid', 'sheet_not_found', 'error'];
+        if (KNOWN_ERRORS.indexOf(text) >= 0) throw new Error(text);
         return text;
       });
   }
@@ -595,16 +602,30 @@ function refresh() {
     console.error('Data load error:', e);
     btn.disabled = false; btn.textContent = '수정사항 반영';
     document.getElementById('overlay').classList.add('hidden');
-    if (e.message === 'forbidden_domain') {
+
+    var msg = e && e.message ? e.message : 'unknown';
+    if (msg === 'forbidden_domain') {
       alert('@sangx2.com 도메인만 접속 가능합니다.');
       sessionStorage.clear();
       location.reload();
       return;
     }
-    // 인증/기타 오류: 알림 + 콘솔 메시지 안내 (즉시 reload 하지 않음 — 디버깅 위해)
-    alert('서버 응답: ' + e.message + '\n\n' +
-          '※ 콘솔(F12)의 [authFetch] 응답을 확인하세요.\n' +
-          '계속 같은 오류면 Apps Script 재배포 또는 권한 승인 필요.');
+    if (msg === 'token_expired' || msg === 'unauthorized') {
+      // 세션 만료 → 자동 재로그인 유도
+      sessionStorage.removeItem('dashboard_token');
+      sessionStorage.removeItem('dashboard_email');
+      AUTH_TOKEN = '';
+      document.getElementById('appWrap').style.display = 'none';
+      document.getElementById('loginScreen').classList.remove('hidden');
+      showLoginError('세션이 만료되었습니다. 다시 로그인해주세요.');
+      initGoogleSignIn();
+      return;
+    }
+    if (msg === 'rate_limited') {
+      alert('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    alert('데이터를 불러오지 못했습니다 (' + msg + ').');
   });
 }
 
