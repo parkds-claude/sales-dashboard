@@ -63,13 +63,17 @@ function verifyIdToken(token) {
   try {
     var url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(token);
     var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    if (res.getResponseCode() !== 200) {
+    var code = res.getResponseCode();
+    var body = res.getContentText();
+    Logger.log('tokeninfo HTTP ' + code + ' body=' + body.slice(0, 200));
+    if (code !== 200) {
       return { ok: false, reason: 'token_expired' };
     }
-    var info = JSON.parse(res.getContentText());
+    var info = JSON.parse(body);
 
     // audience(aud)가 우리 Client ID인지
     if (info.aud !== GOOGLE_CLIENT_ID) {
+      Logger.log('aud mismatch: got=' + info.aud + ' expected=' + GOOGLE_CLIENT_ID);
       return { ok: false, reason: 'unauthorized' };
     }
 
@@ -80,6 +84,7 @@ function verifyIdToken(token) {
 
     // 이메일 검증 여부
     if (info.email_verified !== 'true' && info.email_verified !== true) {
+      Logger.log('email_verified false: ' + info.email_verified);
       return { ok: false, reason: 'unauthorized' };
     }
 
@@ -87,6 +92,7 @@ function verifyIdToken(token) {
 
     // 도메인 화이트리스트
     if (!email.endsWith('@' + ALLOWED_DOMAIN)) {
+      Logger.log('domain forbidden: ' + email);
       return { ok: false, reason: 'forbidden_domain' };
     }
 
@@ -96,8 +102,17 @@ function verifyIdToken(token) {
 
     return { ok: true, email: email };
   } catch (e) {
+    Logger.log('verifyIdToken exception: ' + (e && e.message ? e.message : e));
     return { ok: false, reason: 'unauthorized' };
   }
+}
+
+// 권한 트리거용 — 처음 실행 시 UrlFetchApp 권한 요청을 띄우기 위해 추가
+function requestPermissions() {
+  var res = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=test',
+    { muteHttpExceptions: true });
+  Logger.log('permission test http=' + res.getResponseCode());
+  return 'OK — UrlFetchApp 권한 정상';
 }
 
 function processRequest(token, gid) {
