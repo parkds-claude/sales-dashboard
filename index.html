@@ -332,7 +332,7 @@
 </div>
 
 <!-- Google Identity Services -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client" onload="window.__gisLoaded=true; if(window.initGoogleSignIn) initGoogleSignIn();" onerror="document.getElementById('loginError').textContent='Google 인증 라이브러리 로드 실패 — 네트워크/광고차단 확인'; document.getElementById('loginError').style.display='block';" async defer></script>
 
 <div id="appWrap" style="display:none">
 <div class="sticky-top">
@@ -457,19 +457,37 @@ function handleCredentialResponse(response) {
 }
 
 // GIS 라이브러리 로드 후 버튼 렌더링
+var _gisInitTries = 0;
+var _gisInitDone = false;
 function initGoogleSignIn() {
-  if (!window.google || !google.accounts) { setTimeout(initGoogleSignIn, 100); return; }
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredentialResponse,
-    auto_select: false,
-    hd: 'sangx2.com'  // 도메인 힌트 (UI 필터, 보안 검증은 서버)
-  });
-  google.accounts.id.renderButton(
-    document.getElementById('googleSignInBtn'),
-    { theme: 'filled_blue', size: 'large', shape: 'rectangular', text: 'signin_with', locale: 'ko', width: 280 }
-  );
+  if (_gisInitDone) return;
+  if (!window.google || !google.accounts || !google.accounts.id) {
+    _gisInitTries++;
+    if (_gisInitTries > 50) {
+      showLoginError('Google 인증 로드 시간 초과 — 새로고침 또는 네트워크 점검 필요');
+      return;
+    }
+    setTimeout(initGoogleSignIn, 100);
+    return;
+  }
+  try {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse,
+      auto_select: false,
+      hd: 'sangx2.com',
+      use_fedcm_for_prompt: false
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('googleSignInBtn'),
+      { theme: 'filled_blue', size: 'large', shape: 'rectangular', text: 'signin_with', locale: 'ko', width: 280 }
+    );
+    _gisInitDone = true;
+  } catch (e) {
+    showLoginError('Google 로그인 초기화 실패: ' + (e && e.message ? e.message : e));
+  }
 }
+window.initGoogleSignIn = initGoogleSignIn;
 
 function logout() {
   sessionStorage.removeItem('dashboard_token');
