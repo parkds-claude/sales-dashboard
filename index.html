@@ -569,7 +569,9 @@ function refresh() {
     return fetch(API_BASE + '?token=' + encodeURIComponent(AUTH_TOKEN) + '&gid=' + gid)
       .then(function(r){ return r.text(); })
       .then(function(text) {
-        if (text === 'unauthorized' || text === 'token_expired' || text === 'forbidden_domain') {
+        console.log('[authFetch] gid=' + gid + ' response:', text.slice(0, 200));
+        if (text === 'unauthorized' || text === 'token_expired' || text === 'forbidden_domain' ||
+            text === 'rate_limited' || text === 'invalid_gid' || text === 'sheet_not_found' || text === 'error') {
           throw new Error(text);
         }
         return text;
@@ -591,22 +593,18 @@ function refresh() {
     updateStickyHeight();
   }).catch(function(e) {
     console.error('Data load error:', e);
-    if (e.message === 'token_expired' || e.message === 'unauthorized') {
-      alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-      sessionStorage.removeItem('dashboard_token');
-      sessionStorage.removeItem('dashboard_email');
-      location.reload();
-      return;
-    }
+    btn.disabled = false; btn.textContent = '수정사항 반영';
+    document.getElementById('overlay').classList.add('hidden');
     if (e.message === 'forbidden_domain') {
       alert('@sangx2.com 도메인만 접속 가능합니다.');
       sessionStorage.clear();
       location.reload();
       return;
     }
-    alert('데이터를 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.');
-    btn.disabled = false; btn.textContent = '수정사항 반영';
-    document.getElementById('overlay').classList.add('hidden');
+    // 인증/기타 오류: 알림 + 콘솔 메시지 안내 (즉시 reload 하지 않음 — 디버깅 위해)
+    alert('서버 응답: ' + e.message + '\n\n' +
+          '※ 콘솔(F12)의 [authFetch] 응답을 확인하세요.\n' +
+          '계속 같은 오류면 Apps Script 재배포 또는 권한 승인 필요.');
   });
 }
 
