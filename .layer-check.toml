@@ -1,0 +1,47 @@
+# .layer-check.toml — 레이어 위반 검사 설정
+#
+# 검사기: python3 ~/dev-standards/lint/layer_check.py
+#
+# 리스트 순서: 첫 번째가 가장 "안쪽(하위)" — 아무것도 import 하지 않음.
+#              마지막이 가장 "바깥쪽(상위)" — 모든 하위 레이어를 import 가능.
+# 안쪽이 바깥쪽을 import 하면 위반.
+#
+# 프로젝트별로 paths 를 실제 디렉터리 구조에 맞춰 수정하세요.
+# 디렉터리가 없으면 자동으로 검사에서 제외됩니다 (free zone).
+# 검사를 일시 중단하려면 layers 항목을 모두 주석 처리하세요.
+
+[[layers]]
+name = "types"
+paths = ["src/types", "types", "models"]
+
+[[layers]]
+name = "config"
+paths = ["src/config", "config"]
+
+[[layers]]
+name = "repo"
+paths = ["src/repo", "src/db", "repo", "db"]
+
+[[layers]]
+name = "service"
+paths = ["src/service", "service", "services"]
+
+[[layers]]
+name = "runtime"
+paths = ["src/runtime", "src/cli", "runtime", "cli", "workers"]
+
+[[layers]]
+name = "ui"
+paths = ["src/ui", "src/web", "frontend", "web", "ui", "templates"]
+
+ignore = [
+  "tests", "test", "scripts",
+  ".venv", "venv",
+  "node_modules", "build", "dist",
+  "migrations",
+]
+
+# 명시 예외 (불가피한 역방향 허용)
+# [allow]
+# "src/runtime/migrate.py" = ["src.repo.migrations"]
+[allow]
