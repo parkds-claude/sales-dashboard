@@ -6,7 +6,7 @@
 
 ## 0. 시작 지점
 
-1. 본 프로젝트의 작업 규칙은 → `CLAUDE.md`
+1. 본 프로젝트의 작업 규칙은 → `CLAUDE.md` (이 폴더에는 CLAUDE.md가 없음 — 아래 '프로젝트 컨텍스트' 섹션 참조)
 2. 홈 공통 규칙은 → `~/CLAUDE.md`
 3. 오늘의 작업 누적은 → `docs/daily/{TODAY}/claude.md`
 
@@ -57,3 +57,11 @@ Types → Config → Repo → Service → Runtime → UI
 - 일괄 표준 갱신 → `~/dev-standards/`
 
 > 이 파일을 더 길게 만들지 마세요. 내용이 늘면 `docs/`로 옮기고 여기는 링크만 남기세요.
+
+## 프로젝트 컨텍스트 (인라인 — 이 폴더에 CLAUDE.md 없음)
+
+- 무엇: "2026 영업과표 대시보드" — Google Sheets 데이터를 Chart.js로 보여주는 단일 index.html + Google Apps Script 백엔드(Code.gs: HTML 서빙·CSV 프록시·비밀번호 검증, apps-script-proxy.gs)
+- 실행: 로컬 서버 없음 — 정적 index.html + Apps Script 웹앱(doGet/doPost). Code.gs/apps-script-proxy.gs 수정은 이 폴더 저장만으로 반영 안 됨(Apps Script 측 갱신·재배포 필요)
+- 테스트: 미확인
+- 포트/배포: 로컬 포트 없음. GitHub Pages `parkds-claude.github.io/sales-dashboard` + Apps Script 호스팅 (SECURITY_AUDIT_20260326.md 기준)
+- 주의: Code.gs에 비밀번호 SHA-256 해시(PW_HASH)·SHEET_ID 하드코딩 — 평문 비밀번호는 어디에도 기록 금지. 서버측 rate limit(5회 실패 시 차단) 로직 유지할 것. 보안 관련 변경 전 SECURITY_AUDIT_20260326.md 확인
