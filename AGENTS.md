@@ -39,22 +39,22 @@ Types → Config → Repo → Service → Runtime → UI
 
 - 역방향 import 금지. 위반 시 CI 실패.
 - 프로젝트별 매핑은 `.layer-check.toml`
-- 검사: `python3 ~/dev-standards/lint/layer_check.py`
+- 검사: `python3 ~/dev-standards/lint/layer_check.py` (Python 3.11+ 필요 — 미충족 시 안내 후 정상 종료)
 
 ## 4. 에이전트 작업 절차
 
 1. `CLAUDE.md` 의 "개발 규칙" 섹션을 먼저 읽는다.
 2. 오늘 자 `docs/daily/{TODAY}/claude.md` 확인 (없으면 생성).
 3. 비단순 변경이면 `docs/exec-plans/<slug>.md`를 먼저 작성한다.
-4. 코드 변경 후 `python3 ~/dev-standards/lint/layer_check.py` 통과 확인.
+4. 코드 변경 후 `python3 ~/dev-standards/lint/layer_check.py` 통과 확인. (`.layer-check.toml` 없는 프로젝트는 스킵)
 5. 작업 결과를 `docs/daily/{TODAY}/claude.md`에 추가.
 
 ## 5. 자주 묻는 위치
 
 - 비밀키·환경변수 → `.env`, `secrets/` (커밋 금지)
-- 공통 모듈 → `~/bot-shared/`
-- 봇 등록·실행 → `~/bot-dashboard/`
-- 일괄 표준 갱신 → `~/dev-standards/`
+- 공통 모듈 → `~/bot-shared/` (맥미니 전용 — 맥북엔 없음)
+- 봇 등록·실행 → `~/bot-dashboard/` (맥미니 전용, Bot Dashboard :5055)
+- 일괄 표준 갱신 → `~/dev-standards/` (양 기기 존재, 2026-07-04 맥북 동기화)
 
 > 이 파일을 더 길게 만들지 마세요. 내용이 늘면 `docs/`로 옮기고 여기는 링크만 남기세요.
 
